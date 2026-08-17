@@ -6,6 +6,8 @@ import productRoutes from './routes/productsRoutes.js'
 import cartRoutes from './routes/cartRoutes.js'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
+import categoryRoutes from './routes/categoryRoutes.js'
+import subcategoryRoutes from './routes/subcategoryRoutes.js'
 
 dotenv.config()
 
@@ -19,11 +21,11 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('UNHANDLED REJECTION at:', promise, 'reason:', reason)
 })
 
-const PORT = 3000
+const PORT = process.env.PORT || 3000
 
 app.use(
     cors({
-        origin: ['http://localhost:3000', 'http://localhost:5173'],
+        origin: [ 'http://localhost:5173'],
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: [
             'Content-Type',
@@ -42,6 +44,8 @@ app.use(cookieParser())
 app.use('/api/auth', authRoutes)
 app.use('/api/products', productRoutes)
 app.use('/api/cart', cartRoutes)
+app.use('/api/categories', categoryRoutes)
+app.use('/api/subcategories', subcategoryRoutes)
 
 //Primero se conecta a la DB y luego al Puerto
 connectDB()

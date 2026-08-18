@@ -1,16 +1,45 @@
 import CartModel from '../models/CartModel.js'
-import ProductModel from '../models/ProductModel.js' // Tenemos que validar que el producto exista
+import ProductModel from '../models/ProductModel.js'
+import {
+    calculateLineUnitTotal,
+    isSameCartLine,
+    validateFlavorConfiguration,
+} from '../utils/artisanIceCream.js'
+
+const validateExtras = async (extras = []) => {
+    for (const extra of extras) {
+        const extraProduct = await ProductModel.findById(extra.productId)
+
+        if (!extraProduct) {
+            return {
+                valid: false,
+                message: `El extra ${extra.name} no existe`,
+            }
+        }
+
+        if (
+            extraProduct.inventoryType === 'stock' &&
+            extraProduct.stock < extra.quantity
+        ) {
+            return {
+                valid: false,
+                message: `Solo hay ${extraProduct.stock} unidades de ${extra.name}`,
+            }
+        }
+    }
+
+    return { valid: true }
+}
 
 export const addToCart = async (req, res) => {
     try {
         const userId = req.user?._id || req.body.userId
-        const { productId, quantity = 1 } = req.body
+        const { productId, quantity = 1, configuration = null } = req.body
 
         if (!userId) {
             return res.status(400).json({ message: 'El userId es requerido' })
         }
 
-        // Validaciones
         if (!productId) {
             return res
                 .status(400)
@@ -23,63 +52,68 @@ export const addToCart = async (req, res) => {
                 .json({ message: 'La cantidad debe ser al menos de 1' })
         }
 
-        // Verificar que el producto exista
         const product = await ProductModel.findById(productId)
 
         if (!product) {
             return res.status(400).json({ message: 'Producto no econtrado' })
         }
 
-        // Buscar carrito del usuario
-        let cart = await CartModel.findOne({ userId })
-
-        if (cart) {
-            console.log('USUARIO YA TIENE CARRITO')
-            // Si ya existe el carrito, busca el producto
-
-            // Si ya existe, buacamos el producto
-            const productIndex = cart.products.findIndex(
-                (p) => p.productId.toString() === productId
+        if (product.inventoryType === 'flavor') {
+            const flavorValidation = validateFlavorConfiguration(
+                product,
+                configuration,
             )
 
-            // Verificar el stock
-            if (product.stock < quantity) {
+            if (!flavorValidation.valid) {
                 return res.status(400).json({
-                    message: `Solo hay ${product.stock} de unidades disponibles`,
+                    message: flavorValidation.message,
                 })
             }
+        }
 
-            // QUE HAY COINCIDENCIA
-            if (productIndex > -1) {
-                // PRODUCTO YA EXISTE EN CARRITO DEL USUARIO, SOLO ACTUALIZAR LA CANTIDAD
-                cart.products[productIndex].quantity += quantity
-            } else {
-                console.log('USUARIO NO TIENE CARRITO')
-
-                // NUEVO PRODUCTO AGREGADO AL CARRITO
-                cart.products.push({ productId, quantity })
-            }
-        } else {
-            // Si no existe el carrito
-            cart = new CartModel({
-                userId,
-                products: [{ productId, quantity }],
+        if (product.inventoryType === 'stock' && product.stock < quantity) {
+            return res.status(400).json({
+                message: `Solo hay ${product.stock} de unidades disponibles`,
             })
         }
 
-        // GUARDAR EL CARRITO DE COMPRAS
-        await cart.save()
+        const extrasValidation = await validateExtras(configuration?.extras)
+        if (!extrasValidation.valid) {
+            return res.status(400).json({ message: extrasValidation.message })
+        }
 
-        // OPCIONAL
+        let cart = await CartModel.findOne({ userId })
+
+        if (cart) {
+            const productIndex = cart.products.findIndex((item) =>
+                isSameCartLine(item, productId, configuration),
+            )
+
+            if (productIndex > -1) {
+                cart.products[productIndex].quantity += quantity
+            } else {
+                cart.products.push({
+                    productId,
+                    quantity,
+                    configuration,
+                })
+            }
+        } else {
+            cart = new CartModel({
+                userId,
+                products: [{ productId, quantity, configuration }],
+            })
+        }
+
+        await cart.save()
         await cart.populate('products.productId')
 
-        // DEVOLVEMOS EL CARRITO ACTUALIZA
         res.status(200).json({
             message: 'Producto agregado al carrito',
             cart,
         })
     } catch (error) {
-        res.json({ message: 'ERROR' })
+        res.status(500).json({ message: 'ERROR', error: error.message })
     }
 }
 
@@ -88,7 +122,7 @@ export const getCart = async (req, res) => {
         const { userId } = req.params
 
         const cart = await CartModel.findOne({ userId }).populate(
-            'products.productId'
+            'products.productId',
         )
 
         if (cart) {
@@ -110,8 +144,7 @@ export const getCart = async (req, res) => {
 export const updateCart = async (req, res) => {
     try {
         const { userId } = req.params
-        const { productId, quantity } = req.body
-        console.log('UPDATE CART', productId, quantity)
+        const { productId, quantity, configuration = null } = req.body
 
         const cart = await CartModel.findOne({ userId })
 
@@ -119,8 +152,8 @@ export const updateCart = async (req, res) => {
             return res.status(404).json({ message: 'Carrito no econtrado' })
         }
 
-        const productIndex = cart.products.findIndex(
-            (p) => p.productId.toString() === productId
+        const productIndex = cart.products.findIndex((item) =>
+            isSameCartLine(item, productId, configuration),
         )
 
         if (productIndex > -1) {
@@ -132,15 +165,13 @@ export const updateCart = async (req, res) => {
                 })
             }
 
-            // Verificar que la cantidad no exceda el stock disponible
-            if (quantity > product.stock) {
+            if (product.inventoryType === 'stock' && quantity > product.stock) {
                 return res.status(400).json({
                     message: `Solo hay ${product.stock} unidades disponibles`,
                 })
             }
 
             cart.products[productIndex].quantity = quantity
-
             await cart.save()
 
             res.status(200).json({
@@ -163,34 +194,26 @@ export const updateCart = async (req, res) => {
 export const removeProductFromCart = async (req, res) => {
     try {
         const { userId } = req.params
-        const { productId } = req.body
+        const { productId, configuration = null } = req.body
 
-        // Validar que se proporcionó el producId
         if (!userId) {
             return res.status(400).json({ message: 'El userId es requerido' })
         }
 
-        // Validar que el carrito existe
         const cart = await CartModel.findOne({ userId })
 
         if (!cart) {
             return res.status(404).json({ message: 'Carrito no encontrado' })
         }
 
-        // Buscar el indice del producto en el carrito
-        const productIndex = cart.products.findIndex(
-            (p) => p.productId.toString() === productId
+        const productIndex = cart.products.findIndex((item) =>
+            isSameCartLine(item, productId, configuration),
         )
 
-        // Verificar si el producto existe en el carrito
         if (productIndex > -1) {
-            // Eliminar el producto del carrito
             cart.products.splice(productIndex, 1)
-
-            // Guardad cambios en el carrito
             await cart.save()
 
-            // Devolver el carrito actualizado
             res.status(200).json({
                 message: 'Producto eliminado del carrito con éxito',
                 cart,
@@ -243,7 +266,7 @@ export const getCartTotal = async (req, res) => {
         }
 
         const cart = await CartModel.findOne({ userId }).populate(
-            'products.productId'
+            'products.productId',
         )
 
         if (!cart) {
@@ -252,18 +275,18 @@ export const getCartTotal = async (req, res) => {
             })
         }
 
-        if (cart) {
-            const total = cart.products.reduce((acc, item) => {
-                return acc + item.productId.price * item.quantity
-            }, 0)
+        const total = cart.products.reduce((acc, item) => {
+            const unitTotal = calculateLineUnitTotal(
+                item.productId.price,
+                item.configuration,
+            )
+            return acc + unitTotal * item.quantity
+        }, 0)
 
-            res.status(200).json({
-                message: 'Total obtenido con éxito',
-                total,
-            })
-        } else {
-            res.status(404).json({ message: 'Carrito no encontrado' })
-        }
+        res.status(200).json({
+            message: 'Total obtenido con éxito',
+            total,
+        })
     } catch (error) {
         res.status(500).json({
             message: 'Error del servidor al obtener el total',

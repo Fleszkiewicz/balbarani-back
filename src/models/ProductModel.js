@@ -38,7 +38,13 @@ const ProductSchema = new mongoose.Schema(
         },
         category: {
             type: mongoose.Schema.Types.ObjectId,
+            ref: 'Category',
+            required: true,
+        },
+        subcategory: {
+            type: mongoose.Schema.Types.ObjectId,
             ref: 'Subcategory',
+            default: null,
         },
         inventoryType: {
             type: String,
@@ -50,7 +56,7 @@ const ProductSchema = new mongoose.Schema(
             type: Number,
             min: 0,
             required: function () {
-                return this.inventory === 'stock'
+                return this.inventoryType === 'stock'
             },
         },
         // Solo si inventoryType === 'flavor'

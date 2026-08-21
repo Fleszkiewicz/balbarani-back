@@ -1,5 +1,5 @@
 import { registerSchema, loginSchema } from '../schemas/authSchema.js'
-import UserModel from '../models/userModel.js'
+import UserModel from '../models/UserModel.js'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { ZodError } from 'zod'
@@ -77,34 +77,22 @@ export const loginUser = async (req, res) => {
         const isPasswordValid = await bcrypt.compare(password, user.password)
 
         if (!isPasswordValid) {
-            if (error instanceof ZodError) {
-                return res.status(400).json(
-                    error.issues.map((issue) => ({
-                        message: issue.message,
-                    }))
-                )
-            }
-
-            res.status(500).json({
-                message: 'Error al iniciar sesión',
-                error: error,
-            })
+            return res.status(400).json({ message: 'Credenciales inválidas' })
         }
 
-        // Generar un tokwn con JWT json web token
         const token = jwt.sign(
             { userId: user._id, username: user.username },
             JWT_SECRET,
             {
                 expiresIn: '1h',
-            }
+            },
         )
 
         const userData = {
             id: user._id,
             username: user.username,
             email: user.email,
-            idAdmin: user.isAdmin,
+            isAdmin: user.isAdmin,
         }
 
         res.cookie('accessToken', token, {

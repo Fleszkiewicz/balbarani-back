@@ -6,16 +6,15 @@ import {
     updateCategory,
     deleteCategory,
 } from '../controllers/categoryControllers.js'
+import { requireAuth, requireAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-// Rutas públicas
 router.get('/', getAllCategories)
 router.get('/:slug', getCategoryBySlug)
 
-// Rutas protegidas (admin)
-router.post('/', createCategory)
-router.put('/:id', updateCategory)
-router.delete('/:id', deleteCategory)
+router.post('/', requireAuth, requireAdmin, createCategory)
+router.put('/:id', requireAuth, requireAdmin, updateCategory)
+router.delete('/:id', requireAuth, requireAdmin, deleteCategory)
 
 export default router

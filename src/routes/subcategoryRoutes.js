@@ -5,15 +5,14 @@ import {
     updateSubcategory,
     deleteSubcategory,
 } from '../controllers/subcategoryControllers.js'
+import { requireAuth, requireAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-// Rutas públicas
 router.get('/by-category/:categorySlug', getSubcategoriesByCategory)
 
-// Rutas protegidas (admin)
-router.post('/', createSubcategory)
-router.put('/:id', updateSubcategory)
-router.delete('/:id', deleteSubcategory)
+router.post('/', requireAuth, requireAdmin, createSubcategory)
+router.put('/:id', requireAuth, requireAdmin, updateSubcategory)
+router.delete('/:id', requireAuth, requireAdmin, deleteSubcategory)
 
 export default router

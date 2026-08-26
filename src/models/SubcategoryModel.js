@@ -22,10 +22,15 @@ const SubcategorySchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        imageUrl: {
+            type: String,
+            default: '',
+        },
         active: {
             type: Boolean,
             default: true,
         },
+
     },
     { timestamps: true }
 )

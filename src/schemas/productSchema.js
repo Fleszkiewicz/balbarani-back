@@ -31,14 +31,4 @@ export const productSchema = z
                 path: ['stock'],
             })
         }
-        if (
-            data.inventoryType === 'flavor' &&
-            (!data.flavors || data.flavors.length === 0)
-        ) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: 'Debe cargar al menos un sabor',
-                path: ['flavors'],
-            })
-        }
     })

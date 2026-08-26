@@ -8,6 +8,7 @@ import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import categoryRoutes from './routes/categoryRoutes.js'
 import subcategoryRoutes from './routes/subcategoryRoutes.js'
+import flavorRoutes from './routes/flavorRoutes.js'
 
 dotenv.config()
 
@@ -46,6 +47,7 @@ app.use('/api/products', productRoutes)
 app.use('/api/cart', cartRoutes)
 app.use('/api/categories', categoryRoutes)
 app.use('/api/subcategories', subcategoryRoutes)
+app.use('/api/flavors', flavorRoutes)
 
 //Primero se conecta a la DB y luego al Puerto
 connectDB()

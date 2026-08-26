@@ -62,15 +62,7 @@ const ProductSchema = new mongoose.Schema(
         // Solo si inventoryType === 'flavor'
         flavors: {
             type: [FlavorSchema],
-            validate: {
-                validator: function (value) {
-                    if (this.inventoryType === 'flavor') {
-                        return Array.isArray(value) && value.length > 0
-                    }
-                    return true
-                },
-                message: 'Debe cargar al menos un sabor',
-            },
+            default: [],
         },
         active: {
             type: Boolean,

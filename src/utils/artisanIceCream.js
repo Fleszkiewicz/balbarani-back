@@ -1,3 +1,5 @@
+import FlavorModel from '../models/FlavorModel.js'
+
 const PORTION_LIMITS = [
     { pattern: /1\s*kg/i, max: 4 },
     { pattern: /3\s*\/\s*4/i, max: 4 },
@@ -20,7 +22,7 @@ export const isSameCartLine = (item, productId, configuration) =>
     normalizeConfiguration(item.configuration) ===
         normalizeConfiguration(configuration)
 
-export const validateFlavorConfiguration = (product, configuration) => {
+export const validateFlavorConfiguration = async (product, configuration) => {
     if (!configuration?.flavors?.length) {
         return { valid: false, message: 'Debes configurar los sabores' }
     }
@@ -41,9 +43,7 @@ export const validateFlavorConfiguration = (product, configuration) => {
     for (const { name, quantity } of configuration.flavors) {
         if (quantity <= 0) continue
 
-        const flavor = product.flavors?.find(
-            (item) => item.name === name && item.available,
-        )
+        const flavor = await FlavorModel.findOne({ name, available: true })
 
         if (!flavor) {
             return {

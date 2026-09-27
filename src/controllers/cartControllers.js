@@ -59,7 +59,7 @@ export const addToCart = async (req, res) => {
         }
 
         if (product.inventoryType === 'flavor') {
-            const flavorValidation = validateFlavorConfiguration(
+            const flavorValidation = await validateFlavorConfiguration(
                 product,
                 configuration,
             )

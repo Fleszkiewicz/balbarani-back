@@ -1,6 +1,32 @@
 import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema({
+
+    //VERIFICACION DE CUENTA POR EMAIL
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    verificationCode: {
+        type: String,
+        default: null
+    },
+    verificationCodeExpires: {
+        type: Date,
+        default: Date.now() + 15 * 60 * 1000 // 15 minutos
+    },
+
+    //RECUPERACION DE CONTRASEÑA
+    resetPasswordCode: {
+        type: String,
+        default: null
+    },
+    resetPasswordExpires: {
+        type: Date,
+        default: null
+    },
+
+
     email: {
         type: String,
         required: true,
@@ -28,6 +54,23 @@ const UserSchema = new mongoose.Schema({
         default: false,
         required: true
     },
+    name: {
+        type: String,
+        trim: true,
+    },
+    lastName: {
+        type: String,
+        trim: true,
+    },
+    phone: {
+        type: String,
+        trim: true,
+    },
+    address: {
+        type: String,
+        trim: true,
+    },
+
 
 
 })

@@ -56,3 +56,25 @@ export const deleteSubcategory = async (req, res) => {
         res.status(500).json({ message: error.message })
     }
 }
+
+// Reordenar subcategorías en lote (admin)
+export const reorderSubcategories = async (req, res) => {
+    try {
+        const { items } = req.body
+        if (!Array.isArray(items)) {
+            return res.status(400).json({ message: 'items debe ser un array de { id, order }' })
+        }
+
+        const operations = items.map((item) => ({
+            updateOne: {
+                filter: { _id: item.id },
+                update: { $set: { order: item.order } },
+            },
+        }))
+
+        await Subcategory.bulkWrite(operations)
+        res.status(200).json({ message: 'Orden de subcategorías actualizado exitosamente' })
+    } catch (error) {
+        res.status(500).json({ message: error.message })
+    }
+}

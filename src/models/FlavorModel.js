@@ -1,5 +1,12 @@
 import mongoose from 'mongoose'
 
+export const FLAVOR_CATEGORIES = [
+    'Cremas',
+    'Frutales',
+    'Chocolates',
+    'Dulce de leches',
+]
+
 const FlavorSchema = new mongoose.Schema(
     {
         name: {
@@ -7,6 +14,12 @@ const FlavorSchema = new mongoose.Schema(
             required: true,
             trim: true,
             unique: true,
+        },
+        category: {
+            type: String,
+            enum: FLAVOR_CATEGORIES,
+            default: 'Cremas',
+            required: true,
         },
         available: {
             type: Boolean,

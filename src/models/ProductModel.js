@@ -4,7 +4,7 @@ const FlavorSchema = new mongoose.Schema(
     {
         name: {
             type: String,
-            required:true,
+            required: true,
             trim: true,
         },
         available: {
@@ -64,10 +64,16 @@ const ProductSchema = new mongoose.Schema(
             type: [FlavorSchema],
             default: [],
         },
+        // Posición/orden manual en el catálogo
+        order: {
+            type: Number,
+            default: 0,
+        },
         active: {
             type: Boolean,
             default: true,
         },
+
     },
     { timestamps: true }
 )

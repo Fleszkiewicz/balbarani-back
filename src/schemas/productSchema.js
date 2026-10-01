@@ -21,6 +21,8 @@ export const productSchema = z
         inventoryType: z.enum(['flavor', 'stock']),
         stock: z.number().min(0).int().optional(),
         flavors: z.array(flavorSchema).optional(),
+        // Orden numérico de visualización
+        order: z.number().int().min(0).optional(),
         active: z.boolean().optional(),
     })
     .superRefine((data, ctx) => {

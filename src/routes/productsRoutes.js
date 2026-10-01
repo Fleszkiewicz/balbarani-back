@@ -5,6 +5,7 @@ import {
     getProductById,
     getAllProducts,
     deleteProducts,
+    reorderProducts,
 } from '../controllers/productsControllers.js'
 import { requireAuth, requireAdmin } from '../middleware/authMiddleware.js'
 
@@ -14,6 +15,10 @@ router.get('/', getAllProducts)
 router.get('/:id', getProductById)
 
 router.post('/', requireAuth, requireAdmin, createProduct)
+
+// Ruta de reordenamiento antes de /:id
+router.put('/reorder', requireAuth, requireAdmin, reorderProducts)
+
 router.put('/:id', requireAuth, requireAdmin, updateProduct)
 router.delete('/:id', requireAuth, requireAdmin, deleteProducts)
 

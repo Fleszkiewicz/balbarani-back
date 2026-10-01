@@ -98,6 +98,7 @@ export const getAllProducts = async (req, res) => {
         }
 
         const products = await ProductModel.find(filter)
+            .sort({ order: 1 }) // <-- Ordenar por campo order ascendente
             .populate('category', 'name slug')
             .populate('subcategory', 'name slug')
 
@@ -117,5 +118,28 @@ export const deleteProducts = async (req, res) => {
         return res
             .status(500)
             .json({ message: 'Error al eliminar el producto', error: error })
+    }
+}
+
+
+// Reordenar productos en lote (admin)
+export const reorderProducts = async (req, res) => {
+    try {
+        const { items } = req.body
+        if (!Array.isArray(items)) {
+            return res.status(400).json({ message: 'items debe ser un array de { id, order }' })
+        }
+
+        const operations = items.map((item) => ({
+            updateOne: {
+                filter: { _id: item.id },
+                update: { $set: { order: item.order } },
+            },
+        }))
+
+        await ProductModel.bulkWrite(operations)
+        res.status(200).json({ message: 'Orden de productos actualizado exitosamente' })
+    } catch (error) {
+        res.status(500).json({ message: error.message })
     }
 }

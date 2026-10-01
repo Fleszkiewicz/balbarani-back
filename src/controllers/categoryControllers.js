@@ -64,3 +64,26 @@ export const deleteCategory = async (req, res) => {
         res.status(500).json({ message: error.message })
     }
 }
+
+// Reordenar categorías en lote (admin)
+export const reorderCategories = async (req, res) => {
+    try {
+        const { items } = req.body // Espera un arreglo: [{ id: '...', order: 0 }, { id: '...', order: 1 }]
+        if (!Array.isArray(items)) {
+            return res.status(400).json({ message: 'items debe ser un array de { id, order }' })
+        }
+
+        // Operación atómica bulkWrite para actualizar todos los órdenes en una sola consulta a MongoDB
+        const operations = items.map((item) => ({
+            updateOne: {
+                filter: { _id: item.id },
+                update: { $set: { order: item.order } },
+            },
+        }))
+
+        await Category.bulkWrite(operations)
+        res.status(200).json({ message: 'Orden de categorías actualizado exitosamente' })
+    } catch (error) {
+        res.status(500).json({ message: error.message })
+    }
+}

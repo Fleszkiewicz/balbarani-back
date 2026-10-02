@@ -168,3 +168,33 @@ export const updateOrderStatus = async (req, res) => {
         return res.status(500).json({ message: 'Error al actualizar el estado', error: error.message });
     }
 };
+
+
+// ==========================================
+// OBTENER LAS ÓRDENES DEL USUARIO AUTENTICADO (Mis Compras)
+// ==========================================
+export const getMyOrders = async (req, res) => {
+    try {
+        const userId = req.user?._id;
+
+        if (!userId) {
+            return res.status(401).json({ message: 'Usuario no autenticado' });
+        }
+
+        // Buscamos todas las órdenes del usuario, poblando los datos del producto
+        const orders = await OrderModel.find({ userId })
+            .populate('products.productId', 'name price imageUrl')
+            .sort({ createdAt: -1 }); // Las más recientes primero
+
+        return res.status(200).json({
+            message: 'Órdenes obtenidas correctamente',
+            orders,
+        });
+    } catch (error) {
+        console.error('Error al obtener mis órdenes:', error);
+        return res.status(500).json({
+            message: 'Error al obtener las órdenes',
+            error: error.message,
+        });
+    }
+};

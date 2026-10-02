@@ -6,6 +6,18 @@ import { ZodError } from 'zod'
 import { sendEmail } from '../utils/mailer.js'
 
 
+// ==========================================
+// CONFIGURACIÓN DE DURACIÓN DE SESIONES Y COOKIES
+// ==========================================
+// Administrador: 1 año (365 días) para tener la terminal de comandas siempre activa
+const ADMIN_EXPIRES_IN = '365d';
+const ADMIN_COOKIE_MAX_AGE = 365 * 24 * 60 * 60 * 1000; // 1 año en milisegundos
+
+// Cliente normal: 30 días para una experiencia fluida
+const USER_EXPIRES_IN = '30d';
+const USER_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 días en milisegundos
+
+
 export const registerUser = async (req, res) => {
     try {
         const { username, email, password } = registerSchema.parse(req.body)
@@ -86,29 +98,32 @@ export const loginUser = async (req, res) => {
             return res.status(400).json({ message: 'Credenciales inválidas' })
         }
 
+        // Configuramos la duración según si es Administrador o Cliente
+        const expiresIn = user.isAdmin ? ADMIN_EXPIRES_IN : USER_EXPIRES_IN;
+        const maxAge = user.isAdmin ? ADMIN_COOKIE_MAX_AGE : USER_COOKIE_MAX_AGE;
+
         const token = jwt.sign(
             { userId: user._id, username: user.username },
             JWT_SECRET,
-            {
-                expiresIn: '1h',
-            },
-        )
+            { expiresIn }
+        );
 
         const userData = {
             id: user._id,
             username: user.username,
             email: user.email,
             isAdmin: user.isAdmin,
-        }
+        };
 
         res.cookie('accessToken', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV == 'production',
-            sameSite: process.env.NODE_ENV == 'production' ? 'none' : 'lax',
-            maxAge: 60 * 60 * 1000,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge, // Aplica 1 año para Admin y 30 días para Clientes
         })
             .status(200)
-            .json(userData)
+            .json(userData);
+
     } catch (error) {
         if (error instanceof ZodError) {
             return res
@@ -166,6 +181,9 @@ export const verifyEmail = async (req, res) => {
     try {
         const { email, code } = req.body
         const JWT_SECRET = process.env.JWT_SECRET
+        // Duración según el rol
+        const expiresIn = user.isAdmin ? ADMIN_EXPIRES_IN : USER_EXPIRES_IN;
+        const maxAge = user.isAdmin ? ADMIN_COOKIE_MAX_AGE : USER_COOKIE_MAX_AGE;
 
         if (!email || !code) {
             return res.status(400).json({ message: 'El email y el código son requeridos' })
@@ -191,19 +209,22 @@ export const verifyEmail = async (req, res) => {
         await user.save()
 
         // Creamos la sesión para que quede logueado automáticamente
-        const token = jwt.sign({ userId: user._id, username: user.username }, JWT_SECRET, { expiresIn: '1h' })
-
+        const token = jwt.sign(
+            { userId: user._id, username: user.username },
+            JWT_SECRET,
+            { expiresIn }
+        );
         res.cookie('accessToken', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: 60 * 60 * 1000,
+            maxAge,
         }).status(200).json({
             id: user._id,
             username: user.username,
             email: user.email,
             isAdmin: user.isAdmin,
-        })
+        });
     } catch (error) {
         res.status(500).json({ message: 'Error al verificar email', error: error.message })
     }
